@@ -1,0 +1,6 @@
+@Proiect_Cosmin_Anghel_HostAddress = http://localhost:5062
+
+GET {{Proiect_Cosmin_Anghel_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
