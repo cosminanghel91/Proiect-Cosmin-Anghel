@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Proiect_Cosmin_Anghel.Data;
 using Proiect_Cosmin_Anghel.Dto;
 using Proiect_Cosmin_Anghel.Dto.Extensions;
 using Proiect_Cosmin_Anghel.Services;
@@ -10,10 +11,12 @@ namespace Proiect_Cosmin_Anghel.Controllers
     [ApiController]
     public class StudentsController : ControllerBase
     {
+        private readonly StudentsRegistryDbContext ctx;
         private readonly StudentsService studentsService;
 
-        public StudentsController(StudentsService studentsService)
+        public StudentsController(StudentsRegistryDbContext ctx, StudentsService studentsService)
         {
+            this.ctx = ctx;
             this.studentsService = studentsService;
         }
 
@@ -33,67 +36,93 @@ namespace Proiect_Cosmin_Anghel.Controllers
 
         [HttpGet("{id}")]
         [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StudentToGetDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
         public IActionResult GetById(int id)
         {
-            return Ok(studentsService.GetStudentById(id).ToStudentToGet());
+            var student = studentsService.GetStudentById(id).ToStudentToGet();
+            if (student != null)
+            {
+                return Ok(student);
+            }
+            else
+            {
+                return NotFound("student not found");
+            }
+
         }
 
         [HttpGet("{studentId}/Address")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StudentToGetDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
         public async Task<ActionResult<StudentToGetDto>> GetStudentAddress(int studentId)
         {
             var studentAddress = await studentsService.GetStudentAddressAsync(studentId);
-
+            if (studentId == 0)
+            {
+                return NotFound("student id is invalid");
+            }
+            else
             if (studentAddress == null)
             {
-                return NotFound();
+                return NotFound("student address not found");
             }
-
             return Ok(studentAddress);
         }
 
         [HttpPut("Change student data")]
         public void UpdateStudent([FromHeader] int studentId, [FromBody] StudentToUpdate newStudentData) =>
-                     studentsService.ChangeStudentData(studentId, newStudentData.ToEntity());
+                      studentsService.ChangeStudentData(studentId, newStudentData.ToEntity());
 
 
         [HttpDelete("studentById{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StudentToGetDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
         public async Task<IActionResult> DeleteStudentWithId(int id)
         {
             var result = await studentsService.DeleteStudentById(id);
 
             if (!result)
             {
-                return NotFound(new { Message = "Studentul nu a fost găsit." });
+                return NotFound("student not found");
             }
 
-            return NoContent(); // 204 No Content, ștergerea a fost realizată cu succes
+            return Ok($"student with id:  {id} has been deleted");
         }
 
+
+
+
         [HttpDelete("studentWithAddress{studentId}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StudentToGetDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
+        [ProducesResponseType(StatusCodes.Status400BadRequest, Type = typeof(string))]
         public IActionResult DeleteStudentWithAddress(int studentId, [FromQuery] bool deleteAddress = false)
         {
             var result = studentsService.DeleteStudentWithAddress(studentId, deleteAddress);
 
             if (!result)
             {
-                return NotFound();
+                return NotFound($"student id {studentId} not found");
             }
 
-            return NoContent();
+            return Ok($"student with id:  {studentId} was deleted with the address");
 
         }
 
+
         [HttpDelete("studentComplete{studentId}")]
+        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(StudentToGetDto))]
+        [ProducesResponseType(StatusCodes.Status404NotFound, Type = typeof(string))]
         public IActionResult DeleteStudentComplete(int studentId, [FromQuery] bool deleteComplete = false)
         {
             var result = studentsService.DeleteStudentComplete(studentId, deleteComplete);
 
             if (!result)
             {
-                return NotFound();
+                return NotFound($"student id {studentId} not found");
             }
 
-            return NoContent();
+            return Ok($"student with id:  {studentId} has been deleted from all tables");
 
         }
     }
